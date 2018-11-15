@@ -1,9 +1,4 @@
-# CMake's built-in Android support requires 3.7.0
-if(CMAKE_SYSTEM_NAME MATCHES "Android")
-    cmake_minimum_required(VERSION 3.7.2)
-else()
-    cmake_minimum_required(VERSION 3.0.2)
-endif()
+
 
 # define a macro that helps defining an option
 macro(sfml_set_option var default type docstring)
@@ -489,7 +484,7 @@ elseif(SFML_OS_IOS)
         endif()
 
         if(SFML_BUILD_AUDIO)
-            install(FILES extlibs/libs-ios/libflac.a 
+            install(FILES extlibs/libs-ios/libflac.a
                           extlibs/libs-ios/libvorbis.a
                           extlibs/libs-ios/libogg.a
                           DESTINATION lib)
