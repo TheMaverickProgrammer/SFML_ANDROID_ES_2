@@ -298,17 +298,31 @@ void RenderTarget::draw(const Vertex* vertices, std::size_t vertexCount,
             if (useVertexCache)
                 data = reinterpret_cast<const char*>(m_cache.vertexCache);
 
+#ifdef SFML_OPENGL_ES
+            //TODO BC: actually get the layout indices
+            glCheck(glVertexAttribPointer (0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 0));
+            glCheck(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), data + 8));
+            if (enableTexCoordsArray)
+                glCheck(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 12));
+
+#else
             glCheck(glVertexPointer(2, GL_FLOAT, sizeof(Vertex), data + 0));
             glCheck(glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex), data + 8));
             if (enableTexCoordsArray)
                 glCheck(glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), data + 12));
+#endif
         }
         else if (enableTexCoordsArray && !m_cache.texCoordsArrayEnabled)
         {
             // If we enter this block, we are already using our internal vertex cache
             const char* data = reinterpret_cast<const char*>(m_cache.vertexCache);
 
+#ifdef SFML_OPENGL_ES
+            //TODO BC: actually get the layout indices
+            glCheck(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 12));
+#else
             glCheck(glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), data + 12));
+#endif
         }
 
         drawPrimitives(type, 0, vertexCount);
@@ -367,12 +381,20 @@ void RenderTarget::draw(const VertexBuffer& vertexBuffer, std::size_t firstVerte
         VertexBuffer::bind(&vertexBuffer);
 
         // Always enable texture coordinates
-        if (!m_cache.enable || !m_cache.texCoordsArrayEnabled)
+        if (!m_cache.enable || !m_cache.texCoordsArrayEnabled) {
             glCheck(glEnableClientState(GL_TEXTURE_COORD_ARRAY));
+        }
 
+#ifdef SFML_OPENGL_ES
+        //TODO BC: actually get the layout indices
+        glCheck(glVertexAttribPointer (0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<const void*>(0)));
+        glCheck(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), reinterpret_cast<const void*>(8)));
+        glCheck(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<const void*>(12)));
+#else
         glCheck(glVertexPointer(2, GL_FLOAT, sizeof(Vertex), reinterpret_cast<const void*>(0)));
         glCheck(glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex), reinterpret_cast<const void*>(8)));
         glCheck(glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), reinterpret_cast<const void*>(12)));
+#endif
 
         drawPrimitives(vertexBuffer.getPrimitiveType(), firstVertex, vertexCount);
 
@@ -505,9 +527,13 @@ void RenderTarget::resetGLStates()
 
         // Define the default OpenGL states
         glCheck(glDisable(GL_CULL_FACE));
+#ifndef SFML_OPENGL_ES
         glCheck(glDisable(GL_LIGHTING));
+#endif
         glCheck(glDisable(GL_DEPTH_TEST));
+#ifndef SFML_OPENGL_ES
         glCheck(glDisable(GL_ALPHA_TEST));
+#endif
         glCheck(glEnable(GL_TEXTURE_2D));
         glCheck(glEnable(GL_BLEND));
         glCheck(glMatrixMode(GL_MODELVIEW));
@@ -555,7 +581,7 @@ void RenderTarget::initialize()
 
 
 ////////////////////////////////////////////////////////////
-void RenderTarget::applyCurrentView()
+void RenderTarget::applyCurrentView(const RenderStates& states)
 {
     // Set the viewport
     IntRect viewport = getViewport(m_view);
@@ -563,8 +589,12 @@ void RenderTarget::applyCurrentView()
     glCheck(glViewport(viewport.left, top, viewport.width, viewport.height));
 
     // Set the projection matrix
+#ifdef SFML_OPENGL_ES
+    states.shader->setUniform("projMatrix", Glsl::Mat4(m_view.getTransform().getMatrix()));
+#else
     glCheck(glMatrixMode(GL_PROJECTION));
     glCheck(glLoadMatrixf(m_view.getTransform().getMatrix()));
+#endif
 
     // Go back to model-view mode
     glCheck(glMatrixMode(GL_MODELVIEW));
@@ -622,14 +652,19 @@ void RenderTarget::applyBlendMode(const BlendMode& mode)
 
 
 ////////////////////////////////////////////////////////////
-void RenderTarget::applyTransform(const Transform& transform)
+void RenderTarget::applyTransform(const RenderStates& states)
 {
     // No need to call glMatrixMode(GL_MODELVIEW), it is always the
     // current mode (for optimization purpose, since it's the most used)
-    if (transform == Transform::Identity)
-        glCheck(glLoadIdentity());
-    else
-        glCheck(glLoadMatrixf(transform.getMatrix()));
+
+#ifdef SFML_OPENGL_ES
+        states.shader->setUniform("viewMatrix", Glsl::Mat4(states.transform.getMatrix()));
+#else
+        if (transform == Transform::Identity)
+            glCheck(glLoadIdentity());
+        else
+            glCheck(glLoadMatrixf(transform.getMatrix()));
+#endif
 }
 
 
@@ -659,17 +694,24 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
     if (useVertexCache)
     {
         // Since vertices are transformed, we must use an identity transform to render them
-        if (!m_cache.enable || !m_cache.useVertexCache)
+        if (!m_cache.enable || !m_cache.useVertexCache) {
+#ifdef SFML_OPENGL_ES
+            Transform identity = Transform::Identity;
+            states.shader->setUniform("viewMatrix", Glsl::Mat4(identity.getMatrix()));
+#else
             glCheck(glLoadIdentity());
+#endif
+
+        }
     }
     else
     {
-        applyTransform(states.transform);
+        applyTransform(states);
     }
 
     // Apply the view
     if (!m_cache.enable || m_cache.viewChanged)
-        applyCurrentView();
+        applyCurrentView(states);
 
     // Apply the blend mode
     if (!m_cache.enable || (states.blendMode != m_cache.lastBlendMode))

@@ -38,9 +38,12 @@
 #include <SFML/System/Err.hpp>
 #include <fstream>
 #include <vector>
+#ifdef SFML_SYSTEM_ANDROID
+#include <SFML/System/Android/ResourceStream.hpp>
+#endif
 
 
-#ifndef SFML_OPENGL_ES
+#ifndef SFML_OPENGL_ES_SERIOUSLY
 
 #if defined(SFML_SYSTEM_MACOS) || defined(SFML_SYSTEM_IOS)
 
@@ -58,6 +61,17 @@ namespace
 {
     sf::Mutex maxTextureUnitsMutex;
     sf::Mutex isAvailableMutex;
+
+    void destroyProgram(unsigned int program)
+    {
+#ifdef SFML_OPENGL_ES
+        if (program)
+            glCheck(glDeleteProgram(program));
+#else
+        if (program)
+        glCheck(GLEXT_glDeleteObject(castToGlHandle(program)));
+#endif
+    }
 
     GLint checkMaxTextureUnits()
     {
@@ -78,9 +92,30 @@ namespace
         return maxUnits;
     }
 
+    // Read the contents of a stream into an array of char
+    bool getStreamContents(sf::InputStream& stream, std::vector<char>& buffer)
+    {
+        bool success = true;
+        sf::Int64 size = stream.getSize();
+        if (size > 0)
+        {
+            buffer.resize(static_cast<std::size_t>(size));
+            stream.seek(0);
+            sf::Int64 read = stream.read(&buffer[0], size);
+            success = (read == size);
+        }
+        else
+        {
+            success = false;
+        }
+        buffer.push_back('\0');
+        return success;
+    }
+
     // Read the contents of a file into an array of char
     bool getFileContents(const std::string& filename, std::vector<char>& buffer)
     {
+#ifndef SFML_SYSTEM_ANDROID
         std::ifstream file(filename.c_str(), std::ios_base::binary);
         if (file)
         {
@@ -99,22 +134,10 @@ namespace
         {
             return false;
         }
-    }
-
-    // Read the contents of a stream into an array of char
-    bool getStreamContents(sf::InputStream& stream, std::vector<char>& buffer)
-    {
-        bool success = true;
-        sf::Int64 size = stream.getSize();
-        if (size > 0)
-        {
-            buffer.resize(static_cast<std::size_t>(size));
-            stream.seek(0);
-            sf::Int64 read = stream.read(&buffer[0], size);
-            success = (read == size);
-        }
-        buffer.push_back('\0');
-        return success;
+#else
+        sf::priv::ResourceStream stream(filename);
+        return getStreamContents(stream, buffer);
+#endif
     }
 
     // Transforms an array of 2D vectors into a contiguous array of scalars
@@ -191,7 +214,11 @@ struct Shader::UniformBinder : private NonCopyable
         if (currentProgram)
         {
             // Enable program object
+#ifdef SFML_OPENGL_ES
+            glGetIntegerv(GLEXT_GL_PROGRAM_OBJECT, (GLint*)&savedProgram);
+#else
             glCheck(savedProgram = GLEXT_glGetHandle(GLEXT_GL_PROGRAM_OBJECT));
+#endif
             if (currentProgram != savedProgram)
                 glCheck(GLEXT_glUseProgramObject(currentProgram));
 
@@ -234,8 +261,7 @@ Shader::~Shader()
     TransientContextLock lock;
 
     // Destroy effect program
-    if (m_shaderProgram)
-        glCheck(GLEXT_glDeleteObject(castToGlHandle(m_shaderProgram)));
+    destroyProgram(m_shaderProgram);
 }
 
 
@@ -846,7 +872,7 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
     // Destroy the shader if it was already created
     if (m_shaderProgram)
     {
-        glCheck(GLEXT_glDeleteObject(castToGlHandle(m_shaderProgram)));
+        destroyProgram(m_shaderProgram);
         m_shaderProgram = 0;
     }
 
@@ -870,21 +896,21 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
 
         // Check the compile log
         GLint success;
-        glCheck(GLEXT_glGetObjectParameteriv(vertexShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
+        glCheck(GLEXT_glGetShaderParameteriv(vertexShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
         if (success == GL_FALSE)
         {
             char log[1024];
-            glCheck(GLEXT_glGetInfoLog(vertexShader, sizeof(log), 0, log));
+            glCheck(GLEXT_glGetShaderInfoLog(vertexShader, sizeof(log), 0, log));
             err() << "Failed to compile vertex shader:" << std::endl
                   << log << std::endl;
-            glCheck(GLEXT_glDeleteObject(vertexShader));
-            glCheck(GLEXT_glDeleteObject(shaderProgram));
+            glCheck(GLEXT_glDeleteShader(vertexShader));
+            glCheck(GLEXT_glDeleteProgram(shaderProgram));
             return false;
         }
 
         // Attach the shader to the program, and delete it (not needed anymore)
         glCheck(GLEXT_glAttachObject(shaderProgram, vertexShader));
-        glCheck(GLEXT_glDeleteObject(vertexShader));
+        glCheck(GLEXT_glDeleteShader(vertexShader));
     }
 
     // Create the geometry shader if needed
@@ -897,21 +923,21 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
 
         // Check the compile log
         GLint success;
-        glCheck(GLEXT_glGetObjectParameteriv(geometryShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
+        glCheck(GLEXT_glGetShaderParameteriv(geometryShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
         if (success == GL_FALSE)
         {
             char log[1024];
-            glCheck(GLEXT_glGetInfoLog(geometryShader, sizeof(log), 0, log));
+            glCheck(GLEXT_glGetShaderInfoLog(geometryShader, sizeof(log), 0, log));
             err() << "Failed to compile geometry shader:" << std::endl
                   << log << std::endl;
-            glCheck(GLEXT_glDeleteObject(geometryShader));
-            glCheck(GLEXT_glDeleteObject(shaderProgram));
+            glCheck(GLEXT_glDeleteShader(geometryShader));
+            glCheck(GLEXT_glDeleteProgram(shaderProgram));
             return false;
         }
 
         // Attach the shader to the program, and delete it (not needed anymore)
         glCheck(GLEXT_glAttachObject(shaderProgram, geometryShader));
-        glCheck(GLEXT_glDeleteObject(geometryShader));
+        glCheck(GLEXT_glDeleteShader(geometryShader));
     }
 
     // Create the fragment shader if needed
@@ -925,21 +951,21 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
 
         // Check the compile log
         GLint success;
-        glCheck(GLEXT_glGetObjectParameteriv(fragmentShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
+        glCheck(GLEXT_glGetShaderParameteriv(fragmentShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
         if (success == GL_FALSE)
         {
             char log[1024];
-            glCheck(GLEXT_glGetInfoLog(fragmentShader, sizeof(log), 0, log));
+            glCheck(GLEXT_glGetShaderInfoLog(fragmentShader, sizeof(log), 0, log));
             err() << "Failed to compile fragment shader:" << std::endl
                   << log << std::endl;
-            glCheck(GLEXT_glDeleteObject(fragmentShader));
-            glCheck(GLEXT_glDeleteObject(shaderProgram));
+            glCheck(GLEXT_glDeleteShader(fragmentShader));
+            glCheck(GLEXT_glDeleteProgram(shaderProgram));
             return false;
         }
 
         // Attach the shader to the program, and delete it (not needed anymore)
         glCheck(GLEXT_glAttachObject(shaderProgram, fragmentShader));
-        glCheck(GLEXT_glDeleteObject(fragmentShader));
+        glCheck(GLEXT_glDeleteShader(fragmentShader));
     }
 
     // Link the program
@@ -947,14 +973,14 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
 
     // Check the link log
     GLint success;
-    glCheck(GLEXT_glGetObjectParameteriv(shaderProgram, GLEXT_GL_OBJECT_LINK_STATUS, &success));
+    glCheck(GLEXT_glGetProgramParameteriv(shaderProgram, GLEXT_GL_OBJECT_LINK_STATUS, &success));
     if (success == GL_FALSE)
     {
         char log[1024];
-        glCheck(GLEXT_glGetInfoLog(shaderProgram, sizeof(log), 0, log));
+        glCheck(GLEXT_glGetProgramInfoLog(shaderProgram, sizeof(log), 0, log));
         err() << "Failed to link shader:" << std::endl
               << log << std::endl;
-        glCheck(GLEXT_glDeleteObject(shaderProgram));
+        glCheck(GLEXT_glDeleteProgram(shaderProgram));
         return false;
     }
 

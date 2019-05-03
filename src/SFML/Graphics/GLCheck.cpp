@@ -70,6 +70,7 @@ void glCheckError(const char* file, unsigned int line, const char* expression)
                 break;
             }
 
+#ifndef SFML_OPENGL_ES // no immediate mode
             case GL_STACK_OVERFLOW:
             {
                 error = "GL_STACK_OVERFLOW";
@@ -83,6 +84,7 @@ void glCheckError(const char* file, unsigned int line, const char* expression)
                 description = "This command would cause a stack underflow.";
                 break;
             }
+#endif
 
             case GL_OUT_OF_MEMORY:
             {

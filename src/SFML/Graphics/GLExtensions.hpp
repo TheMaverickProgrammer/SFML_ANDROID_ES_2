@@ -20,6 +20,9 @@
 //
 // 3. This notice may not be removed or altered from any source distribution.
 //
+
+// Cristian Baciu 2019: hacked to use gles2.0
+
 ////////////////////////////////////////////////////////////
 
 #ifndef SFML_GLEXTENSIONS_HPP
@@ -47,7 +50,7 @@
     #define GLEXT_texture_edge_clamp                  true
     #define GLEXT_EXT_texture_edge_clamp              true
     #define GLEXT_blend_minmax                        true
-    #define GLEXT_glClientActiveTexture               glClientActiveTexture
+    //#define GLEXT_glClientActiveTexture               glClientActiveTexture deprecated in gles2.0
     #define GLEXT_glActiveTexture                     glActiveTexture
     #define GLEXT_GL_TEXTURE0                         GL_TEXTURE0
     #define GLEXT_GL_CLAMP                            GL_CLAMP_TO_EDGE
@@ -72,12 +75,81 @@
 
     // The following extensions are required.
 
-    // Core since 2.0 - OES_blend_subtract
-    #define GLEXT_blend_subtract                      GL_OES_blend_subtract
-    #define GLEXT_glBlendEquation                     glBlendEquationOES
-    #define GLEXT_GL_FUNC_ADD                         GL_FUNC_ADD_OES
-    #define GLEXT_GL_FUNC_SUBTRACT                    GL_FUNC_SUBTRACT_OES
-    #define GLEXT_GL_FUNC_REVERSE_SUBTRACT            GL_FUNC_REVERSE_SUBTRACT_OES
+    // Cristian Baciu - etc gles2.0 stuff
+    #define GLEXT_GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS   GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS
+    #define GLEXT_GL_PROGRAM_OBJECT                     GL_CURRENT_PROGRAM
+    #define GLEXT_GL_VERTEX_SHADER                      GL_VERTEX_SHADER
+    #define GLEXT_GL_GEOMETRY_SHADER                    GL_VERTEX_SHADER
+    #define GLEXT_GL_FRAGMENT_SHADER                    GL_FRAGMENT_SHADER
+    #define GLEXT_glAttachObject                        glAttachShader
+    #define GLEXT_glDeleteShader                        glDeleteShader
+    #define GLEXT_glDeleteProgram                       glDeleteProgram
+
+    // temp disables, TODO BC: remove
+    #pragma clang diagnostic ignored "-Wunused-value"
+    #define glEnableClientState(x)                      (0)
+    #define glDisableClientState(x)                     (0)
+    #define glVertexPointer(x,y,z,w)                    (0)
+    #define glColorPointer(x,y,z,w)                     (0)
+    #define glTexCoordPointer(x,y,z,w)                  (0)
+    #define glEnableClientState(x)                      (0)
+    #define glMatrixMode(x)                             (0)
+    #define glPopMatrix(x)                              (0)
+    #define glPushMatrix(x)                             (0)
+    #define GLEXT_glClientActiveTexture(x)              (0)
+    #define glLoadIdentity(x)                           (0)
+    #define glLoadMatrixf(x)                            (0)
+    // end temp disables
+
+    #define GLEXT_glCreateProgramObject                 glCreateProgram
+    #define GLEXT_glCreateShaderObject                  glCreateShader
+    #define GLEXT_glShaderSource                        glShaderSource
+    #define GLEXT_glCompileShader                       glCompileShader
+    #define GLEXT_glUseProgramObject                    glUseProgram
+
+    #define GLEXT_glGetShaderParameteriv                glGetShaderiv
+    #define GLEXT_glGetProgramParameteriv               glGetProgramiv
+
+    #define GLEXT_glGetProgramInfoLog                   glGetProgramInfoLog
+    #define GLEXT_glGetShaderInfoLog                    glGetShaderInfoLog
+
+    #define GLEXT_glLinkProgram                         glLinkProgram
+
+    #define GLEXT_GL_OBJECT_LINK_STATUS                 GL_LINK_STATUS
+    #define GLEXT_GL_OBJECT_COMPILE_STATUS              GL_COMPILE_STATUS
+    #define GLEXT_glGetUniformLocation                  glGetUniformLocation
+
+    #define GLEXT_GLhandle                              GLuint
+    #define GLEXT_glUniform1f                           glUniform1f
+    #define GLEXT_glUniform2f                           glUniform2f
+    #define GLEXT_glUniform3f                           glUniform3f
+    #define GLEXT_glUniform4f                           glUniform4f
+    #define GLEXT_glUniform1i                           glUniform1i
+    #define GLEXT_glUniform2i                           glUniform2i
+    #define GLEXT_glUniform3i                           glUniform3i
+    #define GLEXT_glUniform4i                           glUniform4i
+    #define GLEXT_glUniform1fv                          glUniform1fv
+    #define GLEXT_glUniform2fv                          glUniform2fv
+    #define GLEXT_glUniform3fv                          glUniform3fv
+    #define GLEXT_glUniform4fv                          glUniform4fv
+    #define GLEXT_glUniform1iv                          glUniform1iv
+    #define GLEXT_glUniform2iv                          glUniform2iv
+    #define GLEXT_glUniform3iv                          glUniform3iv
+    #define GLEXT_glUniform4iv                          glUniform4iv
+    #define GLEXT_glUniformMatrix3fv                    glUniformMatrix3fv
+    #define GLEXT_glUniformMatrix4fv                    glUniformMatrix4fv
+    #define GLEXT_shading_language_100                  true
+    #define GLEXT_shader_objects                        true
+    #define GLEXT_vertex_shader                         true
+    #define GLEXT_fragment_shader                       true
+    #define GLEXT_geometry_shader4                      false
+
+// Core since 2.0 - OES_blend_subtract
+    #define GLEXT_blend_subtract                      true
+    #define GLEXT_glBlendEquation                     glBlendEquation
+    #define GLEXT_GL_FUNC_ADD                         GL_FUNC_ADD
+    #define GLEXT_GL_FUNC_SUBTRACT                    GL_FUNC_SUBTRACT
+    #define GLEXT_GL_FUNC_REVERSE_SUBTRACT            GL_FUNC_REVERSE_SUBTRACT
 
     // The following extensions are optional.
 
@@ -88,7 +160,7 @@
     #else
         #define GLEXT_blend_func_separate                 GL_OES_blend_func_separate
     #endif
-    #define GLEXT_glBlendFuncSeparate                 glBlendFuncSeparateOES
+    #define GLEXT_glBlendFuncSeparate                 glBlendFuncSeparate
 
     // Core since 2.0 - OES_blend_equation_separate
     #ifdef SFML_SYSTEM_ANDROID
@@ -97,32 +169,32 @@
     #else
         #define GLEXT_blend_equation_separate             GL_OES_blend_equation_separate
     #endif
-    #define GLEXT_glBlendEquationSeparate             glBlendEquationSeparateOES
+    #define GLEXT_glBlendEquationSeparate             glBlendEquationSeparate
 
     // Core since 2.0 - OES_texture_npot
     #define GLEXT_texture_non_power_of_two            false
 
     // Core since 2.0 - OES_framebuffer_object
-    #define GLEXT_framebuffer_object                  GL_OES_framebuffer_object
-    #define GLEXT_glBindRenderbuffer                  glBindRenderbufferOES
-    #define GLEXT_glDeleteRenderbuffers               glDeleteRenderbuffersOES
-    #define GLEXT_glGenRenderbuffers                  glGenRenderbuffersOES
-    #define GLEXT_glRenderbufferStorage               glRenderbufferStorageOES
-    #define GLEXT_glBindFramebuffer                   glBindFramebufferOES
-    #define GLEXT_glDeleteFramebuffers                glDeleteFramebuffersOES
-    #define GLEXT_glGenFramebuffers                   glGenFramebuffersOES
-    #define GLEXT_glCheckFramebufferStatus            glCheckFramebufferStatusOES
-    #define GLEXT_glFramebufferTexture2D              glFramebufferTexture2DOES
-    #define GLEXT_glFramebufferRenderbuffer           glFramebufferRenderbufferOES
-    #define GLEXT_glGenerateMipmap                    glGenerateMipmapOES
-    #define GLEXT_GL_FRAMEBUFFER                      GL_FRAMEBUFFER_OES
-    #define GLEXT_GL_RENDERBUFFER                     GL_RENDERBUFFER_OES
-    #define GLEXT_GL_DEPTH_COMPONENT                  GL_DEPTH_COMPONENT16_OES
-    #define GLEXT_GL_COLOR_ATTACHMENT0                GL_COLOR_ATTACHMENT0_OES
-    #define GLEXT_GL_DEPTH_ATTACHMENT                 GL_DEPTH_ATTACHMENT_OES
-    #define GLEXT_GL_FRAMEBUFFER_COMPLETE             GL_FRAMEBUFFER_COMPLETE_OES
-    #define GLEXT_GL_FRAMEBUFFER_BINDING              GL_FRAMEBUFFER_BINDING_OES
-    #define GLEXT_GL_INVALID_FRAMEBUFFER_OPERATION    GL_INVALID_FRAMEBUFFER_OPERATION_OES
+    #define GLEXT_framebuffer_object                  true
+    #define GLEXT_glBindRenderbuffer                  glBindRenderbuffer
+    #define GLEXT_glDeleteRenderbuffers               glDeleteRenderbuffers
+    #define GLEXT_glGenRenderbuffers                  glGenRenderbuffers
+    #define GLEXT_glRenderbufferStorage               glRenderbufferStorage
+    #define GLEXT_glBindFramebuffer                   glBindFramebuffer
+    #define GLEXT_glDeleteFramebuffers                glDeleteFramebuffers
+    #define GLEXT_glGenFramebuffers                   glGenFramebuffers
+    #define GLEXT_glCheckFramebufferStatus            glCheckFramebufferStatus
+    #define GLEXT_glFramebufferTexture2D              glFramebufferTexture2D
+    #define GLEXT_glFramebufferRenderbuffer           glFramebufferRenderbuffer
+    #define GLEXT_glGenerateMipmap                    glGenerateMipmap
+    #define GLEXT_GL_FRAMEBUFFER                      GL_FRAMEBUFFER
+    #define GLEXT_GL_RENDERBUFFER                     GL_RENDERBUFFER
+    #define GLEXT_GL_DEPTH_COMPONENT                  GL_DEPTH_COMPONENT16
+    #define GLEXT_GL_COLOR_ATTACHMENT0                GL_COLOR_ATTACHMENT0
+    #define GLEXT_GL_DEPTH_ATTACHMENT                 GL_DEPTH_ATTACHMENT
+    #define GLEXT_GL_FRAMEBUFFER_COMPLETE             GL_FRAMEBUFFER_COMPLETE
+    #define GLEXT_GL_FRAMEBUFFER_BINDING              GL_FRAMEBUFFER_BINDING
+    #define GLEXT_GL_INVALID_FRAMEBUFFER_OPERATION    GL_INVALID_FRAMEBUFFER_OPERATION
 
     // Core since 3.0
     #define GLEXT_packed_depth_stencil                false
@@ -212,6 +284,8 @@
     // Core since 2.0 - ARB_shader_objects
     #define GLEXT_shader_objects                      sfogl_ext_ARB_shader_objects
     #define GLEXT_glDeleteObject                      glDeleteObjectARB
+    #define GLEXT_glDeleteShader                      glDeleteObjectARB
+    #define GLEXT_glDeleteProgram                     glDeleteObjectARB
     #define GLEXT_glGetHandle                         glGetHandleARB
     #define GLEXT_glCreateShaderObject                glCreateShaderObjectARB
     #define GLEXT_glShaderSource                      glShaderSourceARB
@@ -235,8 +309,10 @@
     #define GLEXT_glUniform4fv                        glUniform4fvARB
     #define GLEXT_glUniformMatrix3fv                  glUniformMatrix3fvARB
     #define GLEXT_glUniformMatrix4fv                  glUniformMatrix4fvARB
-    #define GLEXT_glGetObjectParameteriv              glGetObjectParameterivARB
-    #define GLEXT_glGetInfoLog                        glGetInfoLogARB
+    #define GLEXT_glGetShaderParameteriv              glGetObjectParameterivARB
+    #define GLEXT_glGetProgramParameteriv             glGetObjectParameterivARB
+    #define GLEXT_glGetShaderInfoLog                  glGetInfoLogARB
+    #define GLEXT_glGetProgramInfoLog                 glGetInfoLogARB
     #define GLEXT_glGetUniformLocation                glGetUniformLocationARB
     #define GLEXT_GL_PROGRAM_OBJECT                   GL_PROGRAM_OBJECT_ARB
     #define GLEXT_GL_OBJECT_COMPILE_STATUS            GL_OBJECT_COMPILE_STATUS_ARB

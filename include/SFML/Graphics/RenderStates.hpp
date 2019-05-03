@@ -90,7 +90,7 @@ public:
     /// \param theShader Shader to use
     ///
     ////////////////////////////////////////////////////////////
-    RenderStates(const Shader* theShader);
+    RenderStates(Shader* theShader);
 
     ////////////////////////////////////////////////////////////
     /// \brief Construct a set of render states with all its attributes
@@ -102,7 +102,7 @@ public:
     ///
     ////////////////////////////////////////////////////////////
     RenderStates(const BlendMode& theBlendMode, const Transform& theTransform,
-                 const Texture* theTexture, const Shader* theShader);
+                 const Texture* theTexture, Shader* theShader);
 
     ////////////////////////////////////////////////////////////
     // Static member data
@@ -115,7 +115,7 @@ public:
     BlendMode      blendMode; ///< Blending mode
     Transform      transform; ///< Transform
     const Texture* texture;   ///< Texture
-    const Shader*  shader;    ///< Shader
+    Shader*  shader;    ///< Shader
 };
 
 } // namespace sf

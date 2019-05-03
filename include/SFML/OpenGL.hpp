@@ -20,6 +20,9 @@
 //
 // 3. This notice may not be removed or altered from any source distribution.
 //
+
+// Cristian Baciu 2019: hacked to use gles2.0
+
 ////////////////////////////////////////////////////////////
 
 #ifndef SFML_OPENGL_HPP
@@ -48,8 +51,8 @@
 #elif defined(SFML_SYSTEM_LINUX) || defined(SFML_SYSTEM_FREEBSD) || defined(SFML_SYSTEM_OPENBSD)
 
     #if defined(SFML_OPENGL_ES)
-        #include <GLES/gl.h>
-        #include <GLES/glext.h>
+        #include <GLES2/gl2.h>
+        #include <GLES2/gl2ext.h>
     #else
         #include <GL/gl.h>
     #endif
@@ -65,12 +68,13 @@
 
 #elif defined (SFML_SYSTEM_ANDROID)
 
-    #include <GLES/gl.h>
-    #include <GLES/glext.h>
+    #include <GLES2/gl2.h>
+    #include <GLES2/gl2ext.h>
     
     // We're not using OpenGL ES 2+ yet, but we can use the sRGB extension
-    #include <GLES2/gl2platform.h>
-    #include <GLES2/gl2ext.h>
+    // Yes we do!
+    //#include <GLES2/gl2platform.h>
+    //#include <GLES2/gl2ext.h>
 
 #endif
 

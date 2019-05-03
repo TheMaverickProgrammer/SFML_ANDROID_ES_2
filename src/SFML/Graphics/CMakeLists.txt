@@ -131,7 +131,7 @@ else()
 endif()
 
 if(SFML_OS_ANDROID)
-    target_link_libraries(sfml-graphics PRIVATE z EGL GLESv1_CM)
+    target_link_libraries(sfml-graphics PRIVATE z EGL GLESv2)
 endif()
 
 sfml_find_package(Freetype INCLUDE "FREETYPE_INCLUDE_DIRS" LINK "FREETYPE_LIBRARY")
