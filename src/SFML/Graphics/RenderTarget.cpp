@@ -697,7 +697,10 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
         if (!m_cache.enable || !m_cache.useVertexCache) {
 #ifdef SFML_OPENGL_ES
             Transform identity = Transform::Identity;
-            states.shader->setUniform("viewMatrix", Glsl::Mat4(identity.getMatrix()));
+
+            if(states.shader) {
+                states.shader->setUniform("viewMatrix", Glsl::Mat4(identity.getMatrix()));
+            }
 #else
             glCheck(glLoadIdentity());
 #endif
