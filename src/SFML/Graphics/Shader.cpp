@@ -45,20 +45,19 @@
 
 #include <vector>
 
-
-#ifndef SFML_OPENGL_ES
-
 #if defined(SFML_SYSTEM_MACOS) || defined(SFML_SYSTEM_IOS)
 
-    #define castToGlHandle(x) reinterpret_cast<GLEXT_GLhandle>(static_cast<ptrdiff_t>(x))
+#define castToGlHandle(x) reinterpret_cast<GLEXT_GLhandle>(static_cast<ptrdiff_t>(x))
     #define castFromGlHandle(x) static_cast<unsigned int>(reinterpret_cast<ptrdiff_t>(x))
 
 #else
 
-    #define castToGlHandle(x) (x)
-    #define castFromGlHandle(x) (x)
+#define castToGlHandle(x) (x)
+#define castFromGlHandle(x) (x)
 
 #endif
+
+#ifndef SFML_OPENGL_ES
 
 namespace
 {
@@ -1475,7 +1474,7 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
     // Destroy the shader if it was already created
     if (m_shaderProgram)
     {
-        glCheck(glDeleteProgram(m_shaderProgram));
+        glCheck(glDeleteProgram(castToGlHandle(m_shaderProgram)));
         m_shaderProgram = 0;
     }
 
@@ -1492,71 +1491,71 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
     if (vertexShaderCode)
     {
         // Create and compile the shader
-        GLEXT_GLhandle vertexShader;
-        glCheck(vertexShader = GLEXT_glCreateShaderObject(GLEXT_GL_VERTEX_SHADER));
-        glCheck(GLEXT_glShaderSource(vertexShader, 1, &vertexShaderCode, NULL));
-        glCheck(GLEXT_glCompileShader(vertexShader));
+        GLuint vertexShader;
+        glCheck(vertexShader = glCreateShader(GL_VERTEX_SHADER));
+        glCheck(glShaderSource(vertexShader, 1, &vertexShaderCode, NULL));
+        glCheck(glCompileShader(vertexShader));
 
         // Check the compile log
         GLint success;
-        glCheck(GLEXT_glGetObjectParameteriv(vertexShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
+        glCheck(glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success));
         if (success == GL_FALSE)
         {
             char log[1024];
-            glCheck(GLEXT_glGetInfoLog(vertexShader, sizeof(log), 0, log));
+            glCheck(glGetShaderInfoLog (vertexShader, sizeof(log), 0, log));
             err() << "Failed to compile vertex shader:" << std::endl
                   << log << std::endl;
-            glCheck(GLEXT_glDeleteObject(vertexShader));
-            glCheck(GLEXT_glDeleteObject(shaderProgram));
+            glCheck(glDeleteShader(vertexShader));
+            glCheck(glDeleteProgram(shaderProgram));
             return false;
         }
 
         // Attach the shader to the program, and delete it (not needed anymore)
-        glCheck(GLEXT_glAttachObject(shaderProgram, vertexShader));
-        glCheck(GLEXT_glDeleteObject(vertexShader));
+        glCheck(glAttachShader(shaderProgram, vertexShader));
+        glCheck(glDeleteShader(vertexShader));
     }
 
     // Create the fragment shader if needed
     if (fragmentShaderCode)
     {
         // Create and compile the shader
-        GLEXT_GLhandle fragmentShader;
-        glCheck(fragmentShader = GLEXT_glCreateShaderObject(GLEXT_GL_FRAGMENT_SHADER));
-        glCheck(GLEXT_glShaderSource(fragmentShader, 1, &fragmentShaderCode, NULL));
-        glCheck(GLEXT_glCompileShader(fragmentShader));
+        GLuint fragmentShader;
+        glCheck(fragmentShader = glCreateShader(GL_FRAGMENT_SHADER));
+        glCheck(glShaderSource(fragmentShader, 1, &fragmentShaderCode, NULL));
+        glCheck(glCompileShader(fragmentShader));
 
         // Check the compile log
-        GLint success;
-        glCheck(GLEXT_glGetObjectParameteriv(fragmentShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
+        GLint success = 0;
+        glCheck(glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success));
         if (success == GL_FALSE)
         {
             char log[1024];
-            glCheck(GLEXT_glGetInfoLog(fragmentShader, sizeof(log), 0, log));
+            glCheck(glGetShaderInfoLog (fragmentShader, sizeof(log), 0, log));
             err() << "Failed to compile fragment shader:" << std::endl
                   << log << std::endl;
-            glCheck(GLEXT_glDeleteObject(fragmentShader));
-            glCheck(GLEXT_glDeleteObject(shaderProgram));
+            glCheck(glDeleteShader(fragmentShader));
+            glCheck(glDeleteProgram(shaderProgram));
             return false;
         }
 
         // Attach the shader to the program, and delete it (not needed anymore)
-        glCheck(GLEXT_glAttachObject(shaderProgram, fragmentShader));
-        glCheck(GLEXT_glDeleteObject(fragmentShader));
+        glCheck(glAttachShader(shaderProgram, fragmentShader));
+        glCheck(glDeleteShader(fragmentShader));
     }
 
     // Link the program
-    glCheck(GLEXT_glLinkProgram(shaderProgram));
+    glCheck(glLinkProgram(shaderProgram));
 
     // Check the link log
     GLint success;
-    glCheck(GLEXT_glGetObjectParameteriv(shaderProgram, GLEXT_GL_OBJECT_LINK_STATUS, &success));
+    glCheck(glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success));
     if (success == GL_FALSE)
     {
         char log[1024];
-        glCheck(GLEXT_glGetInfoLog(shaderProgram, sizeof(log), 0, log));
+        glCheck(glGetProgramInfoLog (shaderProgram, sizeof(log), 0, log));
         err() << "Failed to link shader:" << std::endl
               << log << std::endl;
-        glCheck(GLEXT_glDeleteObject(shaderProgram));
+        glCheck(glDeleteProgram(shaderProgram));
         return false;
     }
 
@@ -1573,6 +1572,18 @@ bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCod
 ////////////////////////////////////////////////////////////
 void Shader::bindTextures() const
 {
+    TextureTable::const_iterator it = m_textures.begin();
+    for (std::size_t i = 0; i < m_textures.size(); ++i)
+    {
+        GLint index = static_cast<GLsizei>(i + 1);
+        glCheck(glUniform1i(it->first, index));
+        glCheck(glActiveTexture(GLEXT_GL_TEXTURE0 + index));
+        Texture::bind(it->second);
+        ++it;
+    }
+
+    // Make sure that the texture unit which is left active is the number 0
+    glCheck(glActiveTexture(GLEXT_GL_TEXTURE0));
 }
 
 } // namespace sf
