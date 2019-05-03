@@ -36,7 +36,13 @@
 #include <SFML/System/Mutex.hpp>
 #include <SFML/System/Lock.hpp>
 #include <SFML/System/Err.hpp>
+
+#ifndef SFML_SYSTEM_ANDROID
 #include <fstream>
+#else
+#include <SFML/System/FileInputStream.hpp>
+#endif
+
 #include <vector>
 
 
@@ -1015,6 +1021,120 @@ int Shader::getUniformLocation(const std::string& name)
 
 // OpenGL ES 1 doesn't support GLSL shaders at all, we have to provide an empty implementation
 
+
+namespace
+{
+    sf::Mutex maxTextureUnitsMutex;
+    sf::Mutex isAvailableMutex;
+
+    GLint checkMaxTextureUnits()
+    {
+        GLint maxUnits = 0;
+        glCheck(glGetIntegerv(GL_MAX_TEXTURE_UNITS, &maxUnits));
+
+        return maxUnits;
+    }
+
+    // Retrieve the maximum number of texture units available
+    GLint getMaxTextureUnits()
+    {
+        // TODO: Remove this lock when it becomes unnecessary in C++11
+        sf::Lock lock(maxTextureUnitsMutex);
+
+        static GLint maxUnits = checkMaxTextureUnits();
+
+        return maxUnits;
+    }
+
+    // Read the contents of a file into an array of char
+    bool getFileContents(const std::string& filename, std::vector<char>& buffer)
+    {
+        sf::FileInputStream in;
+
+        if(in.open(filename) && in.getSize() > 0) {
+            sf::Int64 size = in.getSize();
+            char* ptr_buffer = new char[size+1];
+            in.read(ptr_buffer, size);
+            ptr_buffer[size] = '\0';
+
+            buffer = std::vector<char>(ptr_buffer, ptr_buffer + size);
+
+            delete[] ptr_buffer;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    // Read the contents of a stream into an array of char
+    bool getStreamContents(sf::InputStream& stream, std::vector<char>& buffer)
+    {
+        bool success = true;
+        sf::Int64 size = stream.getSize();
+        if (size > 0)
+        {
+            buffer.resize(static_cast<std::size_t>(size));
+            stream.seek(0);
+            sf::Int64 read = stream.read(&buffer[0], size);
+            success = (read == size);
+        }
+        buffer.push_back('\0');
+        return success;
+    }
+
+    // Transforms an array of 2D vectors into a contiguous array of scalars
+    template <typename T>
+    std::vector<T> flatten(const sf::Vector2<T>* vectorArray, std::size_t length)
+    {
+        const std::size_t vectorSize = 2;
+
+        std::vector<T> contiguous(vectorSize * length);
+        for (std::size_t i = 0; i < length; ++i)
+        {
+            contiguous[vectorSize * i]     = vectorArray[i].x;
+            contiguous[vectorSize * i + 1] = vectorArray[i].y;
+        }
+
+        return contiguous;
+    }
+
+    // Transforms an array of 3D vectors into a contiguous array of scalars
+    template <typename T>
+    std::vector<T> flatten(const sf::Vector3<T>* vectorArray, std::size_t length)
+    {
+        const std::size_t vectorSize = 3;
+
+        std::vector<T> contiguous(vectorSize * length);
+        for (std::size_t i = 0; i < length; ++i)
+        {
+            contiguous[vectorSize * i]     = vectorArray[i].x;
+            contiguous[vectorSize * i + 1] = vectorArray[i].y;
+            contiguous[vectorSize * i + 2] = vectorArray[i].z;
+        }
+
+        return contiguous;
+    }
+
+    // Transforms an array of 4D vectors into a contiguous array of scalars
+    template <typename T>
+    std::vector<T> flatten(const sf::priv::Vector4<T>* vectorArray, std::size_t length)
+    {
+        const std::size_t vectorSize = 4;
+
+        std::vector<T> contiguous(vectorSize * length);
+        for (std::size_t i = 0; i < length; ++i)
+        {
+            contiguous[vectorSize * i]     = vectorArray[i].x;
+            contiguous[vectorSize * i + 1] = vectorArray[i].y;
+            contiguous[vectorSize * i + 2] = vectorArray[i].z;
+            contiguous[vectorSize * i + 3] = vectorArray[i].w;
+        }
+
+        return contiguous;
+    }
+}
+
 namespace sf
 {
 ////////////////////////////////////////////////////////////
@@ -1032,6 +1152,11 @@ m_currentTexture(-1)
 ////////////////////////////////////////////////////////////
 Shader::~Shader()
 {
+    TransientContextLock lock;
+
+    // Destroy effect program
+    if (m_shaderProgram)
+        glCheck(glDeleteProgram(castToGlHandle(m_shaderProgram)));
 }
 
 
@@ -1045,7 +1170,24 @@ bool Shader::loadFromFile(const std::string& filename, Type type)
 ////////////////////////////////////////////////////////////
 bool Shader::loadFromFile(const std::string& vertexShaderFilename, const std::string& fragmentShaderFilename)
 {
-    return false;
+    // Read the vertex shader file
+    std::vector<char> vertexShader;
+    if (!getFileContents(vertexShaderFilename, vertexShader))
+    {
+        err() << "Failed to open vertex shader file \"" << vertexShaderFilename << "\"" << std::endl;
+        return false;
+    }
+
+    // Read the fragment shader file
+    std::vector<char> fragmentShader;
+    if (!getFileContents(fragmentShaderFilename, fragmentShader))
+    {
+        err() << "Failed to open fragment shader file \"" << fragmentShaderFilename << "\"" << std::endl;
+        return false;
+    }
+
+    // Compile the shader program
+    return compile(&vertexShader[0], NULL, &fragmentShader[0]);
 }
 
 
@@ -1306,7 +1448,7 @@ void Shader::bind(const Shader* shader)
 ////////////////////////////////////////////////////////////
 bool Shader::isAvailable()
 {
-    return false;
+    return true;
 }
 
 
@@ -1320,7 +1462,111 @@ bool Shader::isGeometryAvailable()
 ////////////////////////////////////////////////////////////
 bool Shader::compile(const char* vertexShaderCode, const char* geometryShaderCode, const char* fragmentShaderCode)
 {
-    return false;
+    TransientContextLock lock;
+
+    // First make sure that we can use shaders
+    if (!isAvailable())
+    {
+        err() << "Failed to create a shader: your system doesn't support shaders "
+              << "(you should test Shader::isAvailable() before trying to use the Shader class)" << std::endl;
+        return false;
+    }
+
+    // Destroy the shader if it was already created
+    if (m_shaderProgram)
+    {
+        glCheck(glDeleteProgram(m_shaderProgram));
+        m_shaderProgram = 0;
+    }
+
+    // Reset the internal state
+    m_currentTexture = -1;
+    m_textures.clear();
+    m_uniforms.clear();
+
+    // Create the program
+    GLuint shaderProgram;
+    glCheck(shaderProgram = glCreateProgram());
+
+    // Create the vertex shader if needed
+    if (vertexShaderCode)
+    {
+        // Create and compile the shader
+        GLEXT_GLhandle vertexShader;
+        glCheck(vertexShader = GLEXT_glCreateShaderObject(GLEXT_GL_VERTEX_SHADER));
+        glCheck(GLEXT_glShaderSource(vertexShader, 1, &vertexShaderCode, NULL));
+        glCheck(GLEXT_glCompileShader(vertexShader));
+
+        // Check the compile log
+        GLint success;
+        glCheck(GLEXT_glGetObjectParameteriv(vertexShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
+        if (success == GL_FALSE)
+        {
+            char log[1024];
+            glCheck(GLEXT_glGetInfoLog(vertexShader, sizeof(log), 0, log));
+            err() << "Failed to compile vertex shader:" << std::endl
+                  << log << std::endl;
+            glCheck(GLEXT_glDeleteObject(vertexShader));
+            glCheck(GLEXT_glDeleteObject(shaderProgram));
+            return false;
+        }
+
+        // Attach the shader to the program, and delete it (not needed anymore)
+        glCheck(GLEXT_glAttachObject(shaderProgram, vertexShader));
+        glCheck(GLEXT_glDeleteObject(vertexShader));
+    }
+
+    // Create the fragment shader if needed
+    if (fragmentShaderCode)
+    {
+        // Create and compile the shader
+        GLEXT_GLhandle fragmentShader;
+        glCheck(fragmentShader = GLEXT_glCreateShaderObject(GLEXT_GL_FRAGMENT_SHADER));
+        glCheck(GLEXT_glShaderSource(fragmentShader, 1, &fragmentShaderCode, NULL));
+        glCheck(GLEXT_glCompileShader(fragmentShader));
+
+        // Check the compile log
+        GLint success;
+        glCheck(GLEXT_glGetObjectParameteriv(fragmentShader, GLEXT_GL_OBJECT_COMPILE_STATUS, &success));
+        if (success == GL_FALSE)
+        {
+            char log[1024];
+            glCheck(GLEXT_glGetInfoLog(fragmentShader, sizeof(log), 0, log));
+            err() << "Failed to compile fragment shader:" << std::endl
+                  << log << std::endl;
+            glCheck(GLEXT_glDeleteObject(fragmentShader));
+            glCheck(GLEXT_glDeleteObject(shaderProgram));
+            return false;
+        }
+
+        // Attach the shader to the program, and delete it (not needed anymore)
+        glCheck(GLEXT_glAttachObject(shaderProgram, fragmentShader));
+        glCheck(GLEXT_glDeleteObject(fragmentShader));
+    }
+
+    // Link the program
+    glCheck(GLEXT_glLinkProgram(shaderProgram));
+
+    // Check the link log
+    GLint success;
+    glCheck(GLEXT_glGetObjectParameteriv(shaderProgram, GLEXT_GL_OBJECT_LINK_STATUS, &success));
+    if (success == GL_FALSE)
+    {
+        char log[1024];
+        glCheck(GLEXT_glGetInfoLog(shaderProgram, sizeof(log), 0, log));
+        err() << "Failed to link shader:" << std::endl
+              << log << std::endl;
+        glCheck(GLEXT_glDeleteObject(shaderProgram));
+        return false;
+    }
+
+    m_shaderProgram = castFromGlHandle(shaderProgram);
+
+    // Force an OpenGL flush, so that the shader will appear updated
+    // in all contexts immediately (solves problems in multi-threaded apps)
+    glCheck(glFlush());
+
+    return true;
 }
 
 
