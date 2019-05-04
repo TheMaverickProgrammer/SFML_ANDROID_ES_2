@@ -1353,6 +1353,8 @@ extern void (GL_FUNCPTR *sf_ptrc_glProgramParameteriARB)(GLuint, GLenum, GLint);
 #define glProgramParameteriARB sf_ptrc_glProgramParameteriARB
 #endif // GL_ARB_geometry_shader4
 
+GLAPI GLuint APIENTRY glGetAttribLocation(GLuint program, const GLchar *name);
+
 GLAPI void APIENTRY glAccum(GLenum, GLfloat);
 GLAPI void APIENTRY glAlphaFunc(GLenum, GLfloat);
 GLAPI void APIENTRY glBegin(GLenum);

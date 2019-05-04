@@ -91,7 +91,7 @@
     #define glDisableClientState(x)                     (0)
     #define glVertexPointer(x,y,z,w)                    (0)
     #define glColorPointer(x,y,z,w)                     (0)
-    #define glTexCoordPointer(x,y,z,w)                  (0)
+    //#define glTexCoordPointer(x,y,z,w)                  (0)
     #define glEnableClientState(x)                      (0)
     #define glMatrixMode(x)                             (0)
     #define glPopMatrix(x)                              (0)

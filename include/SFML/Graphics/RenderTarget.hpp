@@ -366,6 +366,11 @@ public:
     ////////////////////////////////////////////////////////////
     void resetGLStates();
 
+    void setDefaultShader(sf::Shader* shader)
+    {
+        m_defaultShader = shader;
+    }
+
 protected:
 
     ////////////////////////////////////////////////////////////
@@ -475,6 +480,7 @@ private:
     View        m_view;        ///< Current view
     StatesCache m_cache;       ///< Render states cache
     Uint64      m_id;          ///< Unique number that identifies the RenderTarget
+    sf::Shader* m_defaultShader;
 };
 
 } // namespace sf

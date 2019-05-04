@@ -373,8 +373,6 @@ FloatRect Text::getGlobalBounds() const
 ////////////////////////////////////////////////////////////
 void Text::draw(RenderTarget& target, RenderStates states) const
 {
-    //TODO BC: remove
-    return;
     if (m_font)
     {
         ensureGeometryUpdate();

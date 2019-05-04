@@ -790,6 +790,39 @@ void Texture::bind(const Texture* texture, CoordinateType coordinateType)
     }
 }
 
+Glsl::Mat4 Texture::getMatrix(CoordinateType coordinateType) const
+{
+    GLfloat matrix[16] = {1.f, 0.f, 0.f, 0.f,
+                          0.f, 1.f, 0.f, 0.f,
+                          0.f, 0.f, 1.f, 0.f,
+                          0.f, 0.f, 0.f, 1.f};
+
+    if (m_texture)
+    {
+        // Check if we need to define a special texture matrix
+        if ((coordinateType == Pixels) || m_pixelsFlipped)
+        {
+
+            // If non-normalized coordinates (= pixels) are requested, we need to
+            // setup scale factors that convert the range [0 .. size] to [0 .. 1]
+            if (coordinateType == Pixels)
+            {
+                matrix[0] = 1.f / m_actualSize.x;
+                matrix[5] = 1.f / m_actualSize.y;
+            }
+
+            // If pixels are flipped we must invert the Y axis
+            if (m_pixelsFlipped)
+            {
+                matrix[5] = -matrix[5];
+                matrix[13] = static_cast<float>(m_size.y) / m_actualSize.y;
+            }
+
+        }
+    }
+    return Glsl::Mat4(matrix);
+}
+
 
 ////////////////////////////////////////////////////////////
 unsigned int Texture::getMaximumSize()

@@ -31,6 +31,7 @@
 #include <SFML/Graphics/Export.hpp>
 #include <SFML/Graphics/Image.hpp>
 #include <SFML/Window/GlResource.hpp>
+#include "../../../../includes/SFML/Graphics/Glsl.hpp"
 
 
 namespace sf
@@ -582,6 +583,8 @@ public:
     ///
     ////////////////////////////////////////////////////////////
     static unsigned int getMaximumSize();
+
+    Glsl::Mat4 getMatrix(CoordinateType coordinateType) const;
 
 private:
 

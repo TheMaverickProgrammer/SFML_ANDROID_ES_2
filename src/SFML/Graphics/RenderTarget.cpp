@@ -299,12 +299,22 @@ void RenderTarget::draw(const Vertex* vertices, std::size_t vertexCount,
                 data = reinterpret_cast<const char*>(m_cache.vertexCache);
 
 #ifdef SFML_OPENGL_ES
-            //TODO BC: actually get the layout indices
-            glCheck(glVertexAttribPointer (0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 0));
-            glCheck(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), data + 8));
-            if (enableTexCoordsArray)
-                glCheck(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 12));
+            sf::Shader* shader = states.shader ? states.shader : m_defaultShader;
 
+            //TODO BC: actually get the layout indices
+
+            GLint pIdx = glGetAttribLocation(shader->getNativeHandle(), "position");
+            GLint cIdx = glGetAttribLocation(shader->getNativeHandle(), "color");
+            GLint tIdx = glGetAttribLocation(shader->getNativeHandle(), "texCoord");
+
+            glEnableVertexAttribArray(pIdx);
+            glEnableVertexAttribArray(cIdx);
+            glEnableVertexAttribArray(tIdx);
+
+            glCheck(glVertexAttribPointer (pIdx, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 0));
+            glCheck(glVertexAttribPointer(cIdx, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), data + 8));
+            if (enableTexCoordsArray)
+                glCheck(glVertexAttribPointer(tIdx, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 12));
 #else
             glCheck(glVertexPointer(2, GL_FLOAT, sizeof(Vertex), data + 0));
             glCheck(glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex), data + 8));
@@ -318,8 +328,21 @@ void RenderTarget::draw(const Vertex* vertices, std::size_t vertexCount,
             const char* data = reinterpret_cast<const char*>(m_cache.vertexCache);
 
 #ifdef SFML_OPENGL_ES
+            sf::Shader* shader = states.shader ? states.shader : m_defaultShader;
+
             //TODO BC: actually get the layout indices
-            glCheck(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 12));
+
+            GLint pIdx = glGetAttribLocation(states.shader->getNativeHandle(), "position");
+            GLint cIdx = glGetAttribLocation(states.shader->getNativeHandle(), "color");
+            GLint tIdx = glGetAttribLocation(states.shader->getNativeHandle(), "texCoord");
+
+            glEnableVertexAttribArray(pIdx);
+            glEnableVertexAttribArray(cIdx);
+            glEnableVertexAttribArray(tIdx);
+
+            glCheck(glVertexAttribPointer (pIdx, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 0));
+            glCheck(glVertexAttribPointer(cIdx, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), data + 8));
+            glCheck(glVertexAttribPointer(tIdx, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 12));
 #else
             glCheck(glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), data + 12));
 #endif
@@ -386,10 +409,21 @@ void RenderTarget::draw(const VertexBuffer& vertexBuffer, std::size_t firstVerte
         }
 
 #ifdef SFML_OPENGL_ES
+        sf::Shader* shader = states.shader ? states.shader : m_defaultShader;
+
         //TODO BC: actually get the layout indices
-        glCheck(glVertexAttribPointer (0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<const void*>(0)));
-        glCheck(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), reinterpret_cast<const void*>(8)));
-        glCheck(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<const void*>(12)));
+
+        GLint pIdx = glGetAttribLocation(shader->getNativeHandle(), "position");
+        GLint cIdx = glGetAttribLocation(shader->getNativeHandle(), "color");
+        GLint tIdx = glGetAttribLocation(shader->getNativeHandle(), "texCoord");
+
+        glEnableVertexAttribArray(pIdx);
+        glEnableVertexAttribArray(cIdx);
+        glEnableVertexAttribArray(tIdx);
+
+        glCheck(glVertexAttribPointer (pIdx, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<const void*>(0)));
+        glCheck(glVertexAttribPointer(cIdx, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), reinterpret_cast<const void*>(8)));
+        glCheck(glVertexAttribPointer(tIdx, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<const void*>(12)));
 #else
         glCheck(glVertexPointer(2, GL_FLOAT, sizeof(Vertex), reinterpret_cast<const void*>(0)));
         glCheck(glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex), reinterpret_cast<const void*>(8)));
@@ -533,8 +567,8 @@ void RenderTarget::resetGLStates()
         glCheck(glDisable(GL_DEPTH_TEST));
 #ifndef SFML_OPENGL_ES
         glCheck(glDisable(GL_ALPHA_TEST));
-#endif
         glCheck(glEnable(GL_TEXTURE_2D));
+#endif
         glCheck(glEnable(GL_BLEND));
         glCheck(glMatrixMode(GL_MODELVIEW));
         glCheck(glLoadIdentity());
@@ -590,7 +624,8 @@ void RenderTarget::applyCurrentView(const RenderStates& states)
 
     // Set the projection matrix
 #ifdef SFML_OPENGL_ES
-    states.shader->setUniform("projMatrix", Glsl::Mat4(m_view.getTransform().getMatrix()));
+        sf::Shader* shader = states.shader ? states.shader : m_defaultShader;
+        shader->setUniform("projMatrix", Glsl::Mat4(m_view.getTransform().getMatrix()));
 #else
     glCheck(glMatrixMode(GL_PROJECTION));
     glCheck(glLoadMatrixf(m_view.getTransform().getMatrix()));
@@ -658,7 +693,8 @@ void RenderTarget::applyTransform(const RenderStates& states)
     // current mode (for optimization purpose, since it's the most used)
 
 #ifdef SFML_OPENGL_ES
-        states.shader->setUniform("viewMatrix", Glsl::Mat4(states.transform.getMatrix()));
+        sf::Shader* shader = states.shader ? states.shader : m_defaultShader;
+        shader->setUniform("viewMatrix", Glsl::Mat4(states.transform.getMatrix()));
 #else
         if (transform == Transform::Identity)
             glCheck(glLoadIdentity());
@@ -697,14 +733,11 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
         if (!m_cache.enable || !m_cache.useVertexCache) {
 #ifdef SFML_OPENGL_ES
             Transform identity = Transform::Identity;
-
-            if(states.shader) {
-                states.shader->setUniform("viewMatrix", Glsl::Mat4(identity.getMatrix()));
-            }
+            sf::Shader* shader = states.shader ? states.shader : m_defaultShader;
+            shader->setUniform("viewMatrix", Glsl::Mat4(identity.getMatrix()));
 #else
             glCheck(glLoadIdentity());
 #endif
-
         }
     }
     else
@@ -738,9 +771,16 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
             applyTexture(states.texture);
     }
 
-    // Apply the shader
-    if (states.shader)
+#ifdef SFML_OPENGL_ES
+    sf::Shader* shader = states.shader ? states.shader : m_defaultShader;
+    applyShader(shader);
+    shader->setUniform("textMatrix", states.texture->getMatrix(Texture::Pixels));
+#else
+        // Apply the shader
+    if (states.shader) {
         applyShader(states.shader);
+    }
+#endif
 }
 
 
@@ -761,8 +801,12 @@ void RenderTarget::drawPrimitives(PrimitiveType type, std::size_t firstVertex, s
 void RenderTarget::cleanupDraw(const RenderStates& states)
 {
     // Unbind the shader, if any
+#ifdef SFML_OPENGL_ES
+    applyShader(NULL);
+#else
     if (states.shader)
         applyShader(NULL);
+#endif
 
     // If the texture we used to draw belonged to a RenderTexture, then forcibly unbind that texture.
     // This prevents a bug where some drivers do not clear RenderTextures properly.
