@@ -341,7 +341,7 @@ void RenderTarget::draw(const Vertex* vertices, std::size_t vertexCount,
             glEnableVertexAttribArray(tIdx);
 
             glCheck(glVertexAttribPointer (pIdx, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 0));
-            glCheck(glVertexAttribPointer(cIdx, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), data + 8));
+            glCheck(glVertexAttribPointer(cIdx, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), data + 8));
             glCheck(glVertexAttribPointer(tIdx, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), data + 12));
 #else
             glCheck(glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), data + 12));
