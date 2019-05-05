@@ -31,8 +31,7 @@
 #include <SFML/Graphics/Export.hpp>
 #include <SFML/Graphics/Image.hpp>
 #include <SFML/Window/GlResource.hpp>
-#include "../../../../includes/SFML/Graphics/Glsl.hpp"
-
+#include <SFML/Graphics/Glsl.hpp>
 
 namespace sf
 {
