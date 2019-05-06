@@ -483,6 +483,8 @@ public:
     ////////////////////////////////////////////////////////////
     bool isRepeated() const;
 
+    void flip(bool value) const {m_pixelsFlipped = value; }
+
     ////////////////////////////////////////////////////////////
     /// \brief Generate a mipmap using the current texture data
     ///
