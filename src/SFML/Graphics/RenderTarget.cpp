@@ -781,7 +781,10 @@ void RenderTarget::setupDraw(bool useVertexCache, const RenderStates& states)
 #ifdef SFML_OPENGL_ES
         sf::Shader* shader = states.shader ? states.shader : m_defaultShader;
         applyShader(shader);
-        shader->setUniform("textMatrix", states.texture->getMatrix(Texture::Pixels));
+
+        if(states.texture) {
+            shader->setUniform("textMatrix", states.texture->getMatrix(Texture::Pixels));
+        }
 #else
         // Apply the shader
     if (states.shader) {
