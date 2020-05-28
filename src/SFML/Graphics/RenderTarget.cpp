@@ -747,10 +747,10 @@ void RenderTarget::applyTransform(const RenderStates& states)
         sf::Shader* shader = states.shader ? states.shader : m_defaultShader;
         shader->setUniform("viewMatrix", Glsl::Mat4(states.transform.getMatrix()));
 #else
-        if (transform == Transform::Identity)
+        if (states.transform == Transform::Identity)
             glCheck(glLoadIdentity());
         else
-            glCheck(glLoadMatrixf(transform.getMatrix()));
+            glCheck(glLoadMatrixf(states.transform.getMatrix()));
 #endif
 }
 

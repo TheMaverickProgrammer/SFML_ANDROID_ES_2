@@ -1,4 +1,4 @@
-
+set (CMAKE_CXX_STANDARD 14)
 
 # define a macro that helps defining an option
 macro(sfml_set_option var default type docstring)
