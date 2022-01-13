@@ -22,11 +22,6 @@ if (NOT CMAKE_VERSION VERSION_LESS 3.9)
     cmake_policy(SET CMP0068 NEW)
 endif()
 
-# add some default value for some additional macOS variable
-# note that those variables are ignored on other systems
-if(NOT CMAKE_OSX_ARCHITECTURES)
-    set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "macOS architecture to build; 64-bit is expected" FORCE)
-endif()
 if(NOT CMAKE_OSX_SYSROOT)
     # query the path to the default SDK, will fail on non-macOS, but it's okay.
     execute_process(COMMAND xcodebuild -sdk macosx -version Path
@@ -245,11 +240,6 @@ if(SFML_OS_MACOSX)
             message(FATAL_ERROR "BUILD_SHARED_LIBS should be TRUE when SFML_BUILD_FRAMEWORKS is TRUE")
             return()
         endif()
-    endif()
-
-    # only the default architecture (i.e. 64-bit) is supported
-    if(NOT CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
-        message(FATAL_ERROR "Only 64-bit architecture is supported")
     endif()
 
     # configure Xcode templates
