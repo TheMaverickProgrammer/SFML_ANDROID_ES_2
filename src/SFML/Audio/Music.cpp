@@ -30,6 +30,7 @@
 #include <SFML/System/Lock.hpp>
 #include <SFML/System/Err.hpp>
 #include <fstream>
+#include <utility>
 
 
 namespace sf
@@ -86,13 +87,13 @@ bool Music::openFromMemory(const void* data, std::size_t sizeInBytes)
 
 
 ////////////////////////////////////////////////////////////
-bool Music::openFromStream(InputStream& stream)
+bool Music::openFromStream(std::unique_ptr<InputStream> stream)
 {
     // First stop the music if it was already running
     stop();
 
     // Open the underlying sound file
-    if (!m_file.openFromStream(stream))
+    if (!m_file.openFromStream(std::move(stream)))
         return false;
 
     // Perform common initializations

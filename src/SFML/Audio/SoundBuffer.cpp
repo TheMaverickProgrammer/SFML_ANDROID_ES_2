@@ -33,6 +33,8 @@
 #include <SFML/Audio/ALCheck.hpp>
 #include <SFML/System/Err.hpp>
 #include <memory>
+#include <memory>
+#include <utility>
 
 
 namespace sf
@@ -104,10 +106,10 @@ bool SoundBuffer::loadFromMemory(const void* data, std::size_t sizeInBytes)
 
 
 ////////////////////////////////////////////////////////////
-bool SoundBuffer::loadFromStream(InputStream& stream)
+bool SoundBuffer::loadFromStream(std::unique_ptr<InputStream> stream)
 {
     InputSoundFile file;
-    if (file.openFromStream(stream))
+    if (file.openFromStream(std::move(stream)))
         return initialize(file);
     else
         return false;

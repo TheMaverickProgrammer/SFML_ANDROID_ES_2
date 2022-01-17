@@ -30,9 +30,11 @@
 ////////////////////////////////////////////////////////////
 #include <SFML/Audio/Export.hpp>
 #include <SFML/Audio/AlResource.hpp>
+#include <SFML/System/InputStream.hpp>
 #include <SFML/System/Time.hpp>
 #include <string>
 #include <vector>
+#include <memory>
 #include <set>
 
 
@@ -40,7 +42,6 @@ namespace sf
 {
 class Sound;
 class InputSoundFile;
-class InputStream;
 
 ////////////////////////////////////////////////////////////
 /// \brief Storage for audio samples defining a sound
@@ -114,7 +115,7 @@ public:
     /// \see loadFromFile, loadFromMemory, loadFromSamples
     ///
     ////////////////////////////////////////////////////////////
-    bool loadFromStream(InputStream& stream);
+    bool loadFromStream(std::unique_ptr<InputStream> stream);
 
     ////////////////////////////////////////////////////////////
     /// \brief Load the sound buffer from an array of audio samples
