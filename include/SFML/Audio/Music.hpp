@@ -31,15 +31,15 @@
 #include <SFML/Audio/Export.hpp>
 #include <SFML/Audio/SoundStream.hpp>
 #include <SFML/Audio/InputSoundFile.hpp>
+#include <SFML/System/InputStream.hpp>
 #include <SFML/System/Mutex.hpp>
 #include <SFML/System/Time.hpp>
 #include <string>
 #include <vector>
-
+#include <memory>
 
 namespace sf
 {
-class InputStream;
 
 ////////////////////////////////////////////////////////////
 /// \brief Streamed music played from an audio file
@@ -161,7 +161,7 @@ public:
     /// \see openFromFile, openFromMemory
     ///
     ////////////////////////////////////////////////////////////
-    bool openFromStream(InputStream& stream);
+    bool openFromStream(std::unique_ptr<InputStream> stream);
 
     ////////////////////////////////////////////////////////////
     /// \brief Get the total duration of the music

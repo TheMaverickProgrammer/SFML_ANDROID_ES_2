@@ -39,8 +39,7 @@ namespace sf
 ////////////////////////////////////////////////////////////
 InputSoundFile::InputSoundFile() :
 m_reader      (NULL),
-m_stream      (NULL),
-m_streamOwned (false),
+m_stream      (nullptr),
 m_sampleOffset   (0),
 m_sampleCount (0),
 m_channelCount(0),
@@ -69,12 +68,10 @@ bool InputSoundFile::openFromFile(const std::string& filename)
         return false;
 
     // Wrap the file into a stream
-    FileInputStream* file = new FileInputStream;
-    m_stream = file;
-    m_streamOwned = true;
+    m_stream = std::make_unique<FileInputStream>();
 
     // Open it
-    if (!file->open(filename))
+    if (!static_cast<FileInputStream*>(m_stream.get())->open(filename))
     {
         close();
         return false;
@@ -82,7 +79,7 @@ bool InputSoundFile::openFromFile(const std::string& filename)
 
     // Pass the stream to the reader
     SoundFileReader::Info info;
-    if (!m_reader->open(*file, info))
+    if (!m_reader->open(*m_stream, info))
     {
         close();
         return false;
@@ -109,16 +106,14 @@ bool InputSoundFile::openFromMemory(const void* data, std::size_t sizeInBytes)
         return false;
 
     // Wrap the memory file into a stream
-    MemoryInputStream* memory = new MemoryInputStream;
-    m_stream = memory;
-    m_streamOwned = true;
+    m_stream = std::make_unique<MemoryInputStream>();
 
     // Open it
-    memory->open(data, sizeInBytes);
+    static_cast<MemoryInputStream*>(m_stream.get())->open(data, sizeInBytes);
 
     // Pass the stream to the reader
     SoundFileReader::Info info;
-    if (!m_reader->open(*memory, info))
+    if (!m_reader->open(*m_stream, info))
     {
         close();
         return false;
@@ -134,22 +129,20 @@ bool InputSoundFile::openFromMemory(const void* data, std::size_t sizeInBytes)
 
 
 ////////////////////////////////////////////////////////////
-bool InputSoundFile::openFromStream(InputStream& stream)
-{
+bool InputSoundFile::openFromStream(std::unique_ptr<InputStream> stream) {
     // If the file is already open, first close it
     close();
 
+    // store the stream
+    m_stream = std::move(stream);
+
     // Find a suitable reader for the file type
-    m_reader = SoundFileFactory::createReaderFromStream(stream);
+    m_reader = SoundFileFactory::createReaderFromStream(*m_stream);
     if (!m_reader)
         return false;
 
-    // store the stream
-    m_stream = &stream;
-    m_streamOwned = false;
-
     // Don't forget to reset the stream to its beginning before re-opening it
-    if (stream.seek(0) != 0)
+    if (m_stream->seek(0) != 0)
     {
         err() << "Failed to open sound file from stream (cannot restart stream)" << std::endl;
         return false;
@@ -157,7 +150,7 @@ bool InputSoundFile::openFromStream(InputStream& stream)
 
     // Pass the stream to the reader
     SoundFileReader::Info info;
-    if (!m_reader->open(stream, info))
+    if (!m_reader->open(*m_stream, info))
     {
         close();
         return false;
@@ -261,11 +254,6 @@ void InputSoundFile::close()
     m_reader = NULL;
 
     // Destroy the stream if we own it
-    if (m_streamOwned)
-    {
-        delete m_stream;
-        m_streamOwned = false;
-    }
     m_stream = NULL;
     m_sampleOffset = 0;
 
